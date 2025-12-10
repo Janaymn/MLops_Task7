@@ -1,55 +1,56 @@
 """
-Main interactive CLI application for the LangGraph multi-agent demo.
-Run: python multiagent_app.py
+Interactive application to run the LangGraph multi-agent demo.
+Run with: python multiagent_app.py
 """
-
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
-from dataclasses import dataclass, field
-from typing import List, Any, Dict
 
+from state import ProjectState
 from multiagent_supervisor import supervisor_node
-from multiagent_agents import researcher_node, writer_node
-
-@dataclass
-class ProjectState(dict):
-    query: str = ""
-    findings: List[str] = field(default_factory=list)
-    attempts: int = 0
-    sufficient: bool = False
-    final_output: str = ""
+from multiagent_agents import research_agent, execute_agent
 
 
 def build_graph():
     builder = StateGraph(ProjectState)
 
     builder.add_node(supervisor_node, name="supervisor_node")
-    builder.add_node(researcher_node, name="researcher_node")
-    builder.add_node(writer_node, name="writer_node")
+    builder.add_node(research_agent, name="research_agent")
+    builder.add_node(execute_agent, name="execute_agent")
 
+    # edges
     builder.add_edge(START, "supervisor_node")
-    builder.add_edge("supervisor_node", "researcher_node")
-    builder.add_edge("researcher_node", "researcher_node")   # loop
-    builder.add_edge("researcher_node", "writer_node")
-    builder.add_edge("writer_node", END)
+    builder.add_edge("supervisor_node", "research_agent")
+
+    # research loop
+    builder.add_edge("research_agent", "research_agent")
+    builder.add_edge("research_agent", "execute_agent")
+
+    builder.add_edge("execute_agent", END)
 
     return builder
 
 
 def run_interactive():
-    print("=== Multi-Agent System (LangGraph) ===")
+    print("=== LangGraph: Research + Execute Demo ===")
     query = input("Enter your query: ")
 
     state = ProjectState(query=query)
     checkpointer = InMemorySaver()
 
     graph = build_graph().compile(checkpointer=checkpointer)
-    result = graph.invoke(state, {"configurable": {"thread_id": "session-1"}})
+    result_state = graph.invoke(state, {"configurable": {"thread_id": "session-1"}})
 
-    print("\n=== RESULTS ===")
-    print(result["final_output"])
-    print("================")
+    print("\n=== RUN SUMMARY ===")
+    print(f"Research attempts: {result_state.get('research_attempts')}")
+    print("Research notes:")
+    for n in result_state.get("research_notes", []):
+        print(f" - {n}")
+    print("\nExecution log:")
+    for l in result_state.get("execution_log", []):
+        print(f" - {l}")
+    print("\nResults saved to: results.txt")
+    print("=== END ===")
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     run_interactive()
