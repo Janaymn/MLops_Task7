@@ -1,0 +1,22 @@
+# Python bytecode / environment
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# Environment variables & secrets
+.env
+
+# Generated runtime outputs & persistent memory
+langgraph_memory.json
+research_notepad.txt
+results.txt
+my_research_graph.png
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
